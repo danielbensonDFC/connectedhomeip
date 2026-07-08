@@ -59,6 +59,10 @@ public class DeviceApp {
 
   public native boolean setOnOff(int endpoint, boolean value);
 
+  // Emits an InitialPress + ShortRelease event pair on the Generic Switch
+  // cluster of the given endpoint (a momentary "button press").
+  public native void triggerSwitchPress(int endpoint);
+
   public native void setDoorLockManager(int endpoint, DoorLockManager manager);
 
   public native boolean setLockType(int endpoint, int value);

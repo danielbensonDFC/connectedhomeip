@@ -26,6 +26,7 @@
 #include "PowerSourceManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/app-platform/ContentAppPlatform.h>
+#include <app/clusters/switch-server/switch-server.h>
 #include <app/server/Dnssd.h>
 #include <app/server/java/AndroidAppServerWrapper.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
@@ -136,6 +137,21 @@ JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
 
     gDeviceTypeIds[0].deviceTypeId = static_cast<uint16_t>(deviceTypeId);
     (void) emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
+}
+
+JNI_METHOD(void, triggerSwitchPress)(JNIEnv *, jobject, jint endpoint)
+{
+    chip::DeviceLayer::StackLock lock;
+    ChipLogProgress(Zcl, "DeviceAppJNI::triggerSwitchPress endpoint=%d", static_cast<int>(endpoint));
+
+    auto * switchCluster = chip::app::Clusters::Switch::FindClusterOnEndpoint(static_cast<EndpointId>(endpoint));
+    VerifyOrReturn(switchCluster != nullptr,
+                   ChipLogError(Zcl, "triggerSwitchPress: no Switch cluster on endpoint %d", static_cast<int>(endpoint)));
+
+    // Emit a momentary press: InitialPress (position 1) followed by ShortRelease.
+    // Ecosystem apps (e.g. Apple Home) surface this as a "button pressed" trigger.
+    (void) switchCluster->OnInitialPress(1);
+    (void) switchCluster->OnShortRelease(1);
 }
 
 JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider)

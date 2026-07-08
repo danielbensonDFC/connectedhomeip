@@ -448,6 +448,14 @@ public class AndroidBleManager implements BleManager {
   }
 
   @Override
+  public boolean onSendIndication(int connId, byte[] svcId, byte[] charId, byte[] characteristicData) {
+    // Peripheral role is not supported by this central-only manager. Subclasses hosting a
+    // local GATT server (device role) must override this to send the indication on C2.
+    Log.e(TAG, "onSendIndication is not supported by AndroidBleManager (central role only)");
+    return false;
+  }
+
+  @Override
   public void onNotifyChipConnectionClosed(int connId) {
     BluetoothGatt gatt = getConnection(connId);
     if (gatt != null) {

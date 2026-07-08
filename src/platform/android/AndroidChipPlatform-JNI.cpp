@@ -288,6 +288,89 @@ JNI_METHOD(void, handleConnectionError)(JNIEnv * env, jobject self, jint conn)
 #endif
 }
 
+// ===== Peripheral (device) role: events from the app-hosted GATT server =====
+
+JNI_METHOD(void, handleWriteReceived)
+(JNIEnv * env, jobject self, jint conn, jbyteArray svcId, jbyteArray charId, jbyteArray value)
+{
+#if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+    chip::DeviceLayer::StackLock lock;
+    BLE_CONNECTION_OBJECT const connObj = reinterpret_cast<BLE_CONNECTION_OBJECT>(conn);
+    const auto valueBegin               = env->GetByteArrayElements(value, nullptr);
+    const auto valueLength              = env->GetArrayLength(value);
+
+    chip::Ble::ChipBleUUID svcUUID;
+    chip::Ble::ChipBleUUID charUUID;
+    chip::System::PacketBufferHandle buffer;
+
+    VerifyOrExit(JavaBytesToUUID(env, svcId, svcUUID),
+                 ChipLogError(DeviceLayer, "handleWriteReceived() called with invalid service ID"));
+    VerifyOrExit(JavaBytesToUUID(env, charId, charUUID),
+                 ChipLogError(DeviceLayer, "handleWriteReceived() called with invalid characteristic ID"));
+
+    buffer = System::PacketBufferHandle::NewWithData(valueBegin, valueLength);
+    VerifyOrExit(!buffer.IsNull(), ChipLogError(DeviceLayer, "Failed to allocate packet buffer"));
+
+    chip::DeviceLayer::Internal::BLEMgrImpl().HandleWriteReceived(connObj, &svcUUID, &charUUID, std::move(buffer));
+exit:
+    env->ReleaseByteArrayElements(value, valueBegin, 0);
+#endif
+}
+
+JNI_METHOD(void, handleSubscribeReceived)
+(JNIEnv * env, jobject self, jint conn, jbyteArray svcId, jbyteArray charId)
+{
+#if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+    chip::DeviceLayer::StackLock lock;
+    BLE_CONNECTION_OBJECT const connObj = reinterpret_cast<BLE_CONNECTION_OBJECT>(conn);
+
+    chip::Ble::ChipBleUUID svcUUID;
+    chip::Ble::ChipBleUUID charUUID;
+    VerifyOrReturn(JavaBytesToUUID(env, svcId, svcUUID),
+                   ChipLogError(DeviceLayer, "handleSubscribeReceived() called with invalid service ID"));
+    VerifyOrReturn(JavaBytesToUUID(env, charId, charUUID),
+                   ChipLogError(DeviceLayer, "handleSubscribeReceived() called with invalid characteristic ID"));
+
+    chip::DeviceLayer::Internal::BLEMgrImpl().HandleSubscribeReceived(connObj, &svcUUID, &charUUID);
+#endif
+}
+
+JNI_METHOD(void, handleUnsubscribeReceived)
+(JNIEnv * env, jobject self, jint conn, jbyteArray svcId, jbyteArray charId)
+{
+#if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+    chip::DeviceLayer::StackLock lock;
+    BLE_CONNECTION_OBJECT const connObj = reinterpret_cast<BLE_CONNECTION_OBJECT>(conn);
+
+    chip::Ble::ChipBleUUID svcUUID;
+    chip::Ble::ChipBleUUID charUUID;
+    VerifyOrReturn(JavaBytesToUUID(env, svcId, svcUUID),
+                   ChipLogError(DeviceLayer, "handleUnsubscribeReceived() called with invalid service ID"));
+    VerifyOrReturn(JavaBytesToUUID(env, charId, charUUID),
+                   ChipLogError(DeviceLayer, "handleUnsubscribeReceived() called with invalid characteristic ID"));
+
+    chip::DeviceLayer::Internal::BLEMgrImpl().HandleUnsubscribeReceived(connObj, &svcUUID, &charUUID);
+#endif
+}
+
+JNI_METHOD(void, handleIndicationConfirmation)
+(JNIEnv * env, jobject self, jint conn, jbyteArray svcId, jbyteArray charId)
+{
+#if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+    chip::DeviceLayer::StackLock lock;
+    BLE_CONNECTION_OBJECT const connObj = reinterpret_cast<BLE_CONNECTION_OBJECT>(conn);
+
+    chip::Ble::ChipBleUUID svcUUID;
+    chip::Ble::ChipBleUUID charUUID;
+    VerifyOrReturn(JavaBytesToUUID(env, svcId, svcUUID),
+                   ChipLogError(DeviceLayer, "handleIndicationConfirmation() called with invalid service ID"));
+    VerifyOrReturn(JavaBytesToUUID(env, charId, charUUID),
+                   ChipLogError(DeviceLayer, "handleIndicationConfirmation() called with invalid characteristic ID"));
+
+    chip::DeviceLayer::Internal::BLEMgrImpl().HandleIndicationConfirmation(connObj, &svcUUID, &charUUID);
+#endif
+}
+
 // for KeyValueStoreManager
 JNI_METHOD(void, setKeyValueStoreManager)(JNIEnv * env, jclass self, jobject manager)
 {

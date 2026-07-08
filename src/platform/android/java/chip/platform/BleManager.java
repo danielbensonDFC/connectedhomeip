@@ -52,6 +52,10 @@ public interface BleManager {
 
   boolean onSendWriteRequest(int connId, byte[] svcId, byte[] charId, byte[] characteristicData);
 
+  // Peripheral (device) role: send an indication on a characteristic hosted by the local
+  // GATT server (e.g. CHIPoBLE C2). Central-only implementations may return false.
+  boolean onSendIndication(int connId, byte[] svcId, byte[] charId, byte[] characteristicData);
+
   // BleApplicationDelegate
   void onNotifyChipConnectionClosed(int connId);
 

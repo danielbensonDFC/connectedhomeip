@@ -115,6 +115,15 @@ void BLEManagerImpl::InitializeWithObject(jobject manager)
         env->ExceptionClear();
     }
 
+    // Optional method — present only on BleManager implementations that support the
+    // peripheral (device) role. Absence is not an error for central-only managers.
+    mOnSendIndicationMethod = env->GetMethodID(BLEManagerClass, "onSendIndication", "(I[B[B[B)Z");
+    if (mOnSendIndicationMethod == nullptr)
+    {
+        ChipLogError(DeviceLayer, "Failed to access BLEManager 'onSendIndication' method");
+        env->ExceptionClear();
+    }
+
     mOnNotifyChipConnectionClosedMethod = env->GetMethodID(BLEManagerClass, "onNotifyChipConnectionClosed", "(I)V");
     if (mOnNotifyChipConnectionClosedMethod == nullptr)
     {
@@ -357,7 +366,45 @@ exit:
 CHIP_ERROR BLEManagerImpl::SendIndication(BLE_CONNECTION_OBJECT conId, const ChipBleUUID * svcId, const Ble::ChipBleUUID * charId,
                                           chip::System::PacketBufferHandle pBuf)
 {
-    return CHIP_ERROR_NOT_IMPLEMENTED;
+    chip::DeviceLayer::StackUnlock unlock;
+    CHIP_ERROR err = CHIP_NO_ERROR;
+    JNIEnv * env   = JniReferences::GetInstance().GetEnvForCurrentThread();
+    jbyteArray svcIdObj;
+    jbyteArray charIdObj;
+    jbyteArray characteristicDataObj;
+    intptr_t tmpConnObj;
+
+    ChipLogProgress(DeviceLayer, "Received SendIndication");
+    VerifyOrExit(mBLEManagerObject.HasValidObjectRef(), err = CHIP_ERROR_INCORRECT_STATE);
+    VerifyOrExit(mOnSendIndicationMethod != nullptr, err = CHIP_ERROR_INCORRECT_STATE);
+    VerifyOrExit(env != NULL, err = CHIP_JNI_ERROR_NO_ENV);
+
+    err = JniReferences::GetInstance().N2J_ByteArray(env, static_cast<const uint8_t *>(svcId->bytes), 16, svcIdObj);
+    SuccessOrExit(err);
+
+    err = JniReferences::GetInstance().N2J_ByteArray(env, static_cast<const uint8_t *>(charId->bytes), 16, charIdObj);
+    SuccessOrExit(err);
+
+    VerifyOrExit(CanCastTo<uint16_t>(pBuf->DataLength()), err = CHIP_ERROR_MESSAGE_TOO_LONG);
+    err = JniReferences::GetInstance().N2J_ByteArray(env, pBuf->Start(), static_cast<uint16_t>(pBuf->DataLength()),
+                                                     characteristicDataObj);
+    SuccessOrExit(err);
+
+    env->ExceptionClear();
+    tmpConnObj = reinterpret_cast<intptr_t>(conId);
+    VerifyOrExit(env->CallBooleanMethod(mBLEManagerObject.ObjectRef(), mOnSendIndicationMethod, static_cast<jint>(tmpConnObj),
+                                        svcIdObj, charIdObj, characteristicDataObj),
+                 err = BLE_ERROR_GATT_INDICATE_FAILED);
+    VerifyOrExit(!env->ExceptionCheck(), err = CHIP_JNI_ERROR_EXCEPTION_THROWN);
+
+exit:
+    if (err != CHIP_NO_ERROR)
+    {
+        JniReferences::GetInstance().ReportError(env, err, __FUNCTION__);
+    }
+    env->ExceptionClear();
+
+    return err;
 }
 
 CHIP_ERROR BLEManagerImpl::SendWriteRequest(BLE_CONNECTION_OBJECT conId, const Ble::ChipBleUUID * svcId,

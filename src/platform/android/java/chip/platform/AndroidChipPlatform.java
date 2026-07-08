@@ -96,6 +96,20 @@ public final class AndroidChipPlatform {
   // connection status changed
   public native void handleConnectionError(int connId);
 
+  // ===== Peripheral (device) role: forward GATT server events into the BleLayer =====
+
+  // central wrote to C1 (client TX characteristic)
+  public native void handleWriteReceived(int connId, byte[] svcId, byte[] charId, byte[] data);
+
+  // central subscribed to C2 indications (CCCD write)
+  public native void handleSubscribeReceived(int connId, byte[] svcId, byte[] charId);
+
+  // central unsubscribed from C2 indications
+  public native void handleUnsubscribeReceived(int connId, byte[] svcId, byte[] charId);
+
+  // central confirmed receipt of a C2 indication
+  public native void handleIndicationConfirmation(int connId, byte[] svcId, byte[] charId);
+
   // for KeyValueStoreManager
   private native void setKeyValueStoreManager(KeyValueStoreManager manager);
 

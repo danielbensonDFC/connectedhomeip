@@ -131,6 +131,7 @@ private:
     jmethodID mOnCloseConnectionMethod            = nullptr;
     jmethodID mOnGetMTUMethod                     = nullptr;
     jmethodID mOnSendWriteRequestMethod           = nullptr;
+    jmethodID mOnSendIndicationMethod             = nullptr;
     jmethodID mOnNotifyChipConnectionClosedMethod = nullptr;
     jmethodID mOnNewConnectionMethod              = nullptr;
 };
