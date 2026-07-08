@@ -21,10 +21,87 @@
 #include <app/server/Server.h>
 #include <lib/core/CHIPCore.h>
 #include <lib/core/DataModelTypes.h>
+#include <lib/support/Span.h>
 #include <platform/CHIPDeviceLayer.h>
+#include <platform/DeviceInfoProvider.h>
 
 using namespace chip;
 using namespace chip::DeviceLayer;
+
+// ---------------------------------------------------------------------------
+// Minimal DeviceInfoProvider implementation required before Server::Init.
+// The LocalizationConfiguration cluster aborts if no DeviceInfoProvider is
+// registered when it initialises (see ClusterIntegration.cpp).
+// This stub reports "en-US" as the single supported locale, which is
+// sufficient for the Matter commissioning demo.
+// ---------------------------------------------------------------------------
+namespace {
+
+class SteamistDeviceInfoProvider : public DeviceInfoProvider
+{
+public:
+    // -----------------------------------------------------------------------
+    // Locale support — report "en-US" as the single supported locale.
+    // -----------------------------------------------------------------------
+    class LocaleIterator : public Iterator<CharSpan>
+    {
+    public:
+        size_t Count() override { return 1; }
+        bool Next(CharSpan & item) override
+        {
+            if (mDone) return false;
+            mDone = true;
+            item  = CharSpan::fromCharString("en-US");
+            return true;
+        }
+        void Release() override {}
+    private:
+        bool mDone = false;
+    };
+
+    // -----------------------------------------------------------------------
+    // Calendar type support — report nothing (optional cluster feature).
+    // -----------------------------------------------------------------------
+    class CalendarIterator : public Iterator<CalendarType>
+    {
+    public:
+        size_t Count() override { return 0; }
+        bool Next(CalendarType &) override { return false; }
+        void Release() override {}
+    };
+
+    // -----------------------------------------------------------------------
+    // Fixed/User label support — report nothing (optional cluster feature).
+    // -----------------------------------------------------------------------
+    using LabelEntry = chip::app::Clusters::detail::Structs::LabelStruct::Type;
+    class EmptyLabelIterator : public Iterator<LabelEntry>
+    {
+    public:
+        size_t Count() override { return 0; }
+        bool Next(LabelEntry &) override { return false; }
+        void Release() override {}
+    };
+
+    SupportedLocalesIterator *       IterateSupportedLocales() override       { return &mLocaleIterator; }
+    SupportedCalendarTypesIterator * IterateSupportedCalendarTypes() override { return &mCalendarIterator; }
+
+    FixedLabelIterator * IterateFixedLabel(EndpointId) override { return &mLabelIterator; }
+    UserLabelIterator *  IterateUserLabel(EndpointId) override  { return &mLabelIterator; }
+
+    CHIP_ERROR SetUserLabelAt(EndpointId, size_t, const LabelEntry &) override { return CHIP_NO_ERROR; }
+    CHIP_ERROR DeleteUserLabelAt(EndpointId, size_t) override                  { return CHIP_NO_ERROR; }
+    CHIP_ERROR SetUserLabelLength(EndpointId, size_t) override                 { return CHIP_NO_ERROR; }
+    CHIP_ERROR GetUserLabelLength(EndpointId, size_t & val) override           { val = 0; return CHIP_NO_ERROR; }
+
+private:
+    LocaleIterator     mLocaleIterator;
+    CalendarIterator   mCalendarIterator;
+    EmptyLabelIterator mLabelIterator;
+};
+
+SteamistDeviceInfoProvider gDeviceInfoProvider;
+
+} // namespace
 
 void DeviceEventCallback(const ChipDeviceEvent * event, intptr_t arg)
 {
@@ -96,8 +173,12 @@ CHIP_ERROR PreServerInit()
      *
      */
 
-    chip::DeviceLayer::PlatformMgr().AddEventHandler(DeviceEventCallback, reinterpret_cast<intptr_t>(nullptr));
-    Server::GetInstance().GetFabricTable().AddFabricDelegate(&gFabricDelegate);
+    // Must be set before Server::Init so the LocalizationConfiguration cluster
+    // can retrieve the device's supported locales without aborting.
+    DeviceLayer::SetDeviceInfoProvider(&gDeviceInfoProvider);
+
+    (void) chip::DeviceLayer::PlatformMgr().AddEventHandler(DeviceEventCallback, reinterpret_cast<intptr_t>(nullptr));
+    (void) Server::GetInstance().GetFabricTable().AddFabricDelegate(&gFabricDelegate);
 
     return CHIP_NO_ERROR;
 }

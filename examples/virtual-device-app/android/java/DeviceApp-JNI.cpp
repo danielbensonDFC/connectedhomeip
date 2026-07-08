@@ -126,7 +126,7 @@ JNI_METHOD(void, preServerInit)(JNIEnv *, jobject app)
     chip::DeviceLayer::StackLock lock;
     ChipLogProgress(Zcl, "DeviceAppJNI::preServerInit");
 
-    PreServerInit();
+    (void) PreServerInit();
 }
 
 JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
@@ -135,7 +135,7 @@ JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
     ChipLogProgress(Zcl, "DeviceAppJNI::postServerInit");
 
     gDeviceTypeIds[0].deviceTypeId = static_cast<uint16_t>(deviceTypeId);
-    emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
+    (void) emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
 }
 
 JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider)

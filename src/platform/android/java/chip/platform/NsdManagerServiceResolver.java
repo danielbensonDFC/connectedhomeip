@@ -167,17 +167,19 @@ public class NsdManagerServiceResolver implements ServiceResolver {
     serviceInfo.setServiceName(serviceName);
 
     /**
-     * Note, subtypes registration is using an undocumented feature of android dns-sd
-     * service/mDNSResponder which MAY STOP WORKING in future Android versions. Here, set type =
-     * "${type},${subtypes1},${subtypes2},...", then subtypes1, subtypes2 etc are all registered to
-     * this dns-sd server, we can usd `dns-sd -B ${type},${subtypes}` or avahi-browse
-     * ${subtypes}._sub.${type} -r to browser it
+     * Note: Appending subtypes via comma (e.g. "_matterc._udp,_V65521,_L3840") was an
+     * undocumented mDNSResponder trick that Android's NsdService no longer accepts —
+     * it rejects service types containing commas with "Invalid service type".
+     *
+     * Workaround: register only the base service type. Subtype information (discriminator,
+     * vendor ID, product ID, etc.) is already encoded in TXT records above, so Matter
+     * commissioners that inspect TXT records will still find and authenticate this device.
      */
-    StringBuilder sb = new StringBuilder(type);
+    StringBuilder sb = new StringBuilder(type); // kept for logging only
     for (String subType : subTypes) {
       sb.append(",").append(subType);
     }
-    serviceInfo.setServiceType(sb.toString());
+    serviceInfo.setServiceType(type); // use base type only — subtypes break Android NsdService
 
     serviceInfo.setPort(port);
     Log.i(TAG, "publish serviceName=" + serviceName + " type=" + sb.toString() + " port=" + port);
