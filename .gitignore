@@ -1,3 +1,8 @@
+# Claude
+.claude/
+CLAUDE.md
+.claudeignore
+
 # VS Code Configs
 .vscode/*
 !.vscode/tasks.json
