@@ -59,21 +59,13 @@ public class DeviceApp {
 
   public native boolean setOnOff(int endpoint, boolean value);
 
-  public native void setDoorLockManager(int endpoint, DoorLockManager manager);
+  // (Re)opens the basic commissioning window for the given timeout (seconds),
+  // so the device advertises as commissionable. Safe to call repeatedly — any
+  // open window is closed first to reset the timeout.
+  public native void openBasicCommissioningWindow(int timeoutSeconds);
 
-  public native boolean setLockType(int endpoint, int value);
-
-  public native boolean setLockState(int endpoint, int value);
-
-  public native boolean setActuatorEnabled(int endpoint, boolean value);
-
-  public native boolean setAutoRelockTime(int endpoint, int value);
-
-  public native boolean setOperatingMode(int endpoint, int value);
-
-  public native boolean setSupportedOperatingModes(int endpoint, int value);
-
-  public native boolean sendLockAlarmEvent(int endpoint);
+  // Closes the commissioning window if one is open.
+  public native void closeCommissioningWindow();
 
   public native void setPowerSourceManager(int endpoint, PowerSourceManager manager);
 

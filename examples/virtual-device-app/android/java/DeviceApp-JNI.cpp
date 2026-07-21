@@ -20,13 +20,13 @@
 #include "AppImpl.h"
 #include "JNIDACProvider.h"
 
-#include "ColorControlManager.h"
-#include "DoorLockManager.h"
 #include "OnOffManager.h"
 #include "PowerSourceManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/app-platform/ContentAppPlatform.h>
 #include <app/server/Dnssd.h>
+#include <app/server/Server.h>
+#include <system/SystemClock.h>
 #include <app/server/java/AndroidAppServerWrapper.h>
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 #include <jni.h>
@@ -138,6 +138,44 @@ JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
     (void) emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
 }
 
+// (Re)opens the basic commissioning window so the device advertises as
+// commissionable and accepts a PASE session. The window auto-opened at
+// Server::Init times out (CHIP_DEVICE_CONFIG_DISCOVERY_TIMEOUT_SECS), after
+// which the device goes dark; calling this on each visit to the pairing screen
+// gives a fresh window. Any already-open window is closed first so the timeout
+// is reset.
+JNI_METHOD(void, openBasicCommissioningWindow)(JNIEnv *, jobject, jint timeoutSeconds)
+{
+    chip::DeviceLayer::StackLock lock;
+    auto & mgr = chip::Server::GetInstance().GetCommissioningWindowManager();
+
+    if (mgr.IsCommissioningWindowOpen())
+    {
+        mgr.CloseCommissioningWindow();
+    }
+
+    CHIP_ERROR err = mgr.OpenBasicCommissioningWindow(chip::System::Clock::Seconds32(static_cast<uint32_t>(timeoutSeconds)));
+    if (err != CHIP_NO_ERROR)
+    {
+        ChipLogError(Zcl, "openBasicCommissioningWindow failed: %" CHIP_ERROR_FORMAT, err.Format());
+    }
+    else
+    {
+        ChipLogProgress(Zcl, "Basic commissioning window opened for %d s", static_cast<int>(timeoutSeconds));
+    }
+}
+
+JNI_METHOD(void, closeCommissioningWindow)(JNIEnv *, jobject)
+{
+    chip::DeviceLayer::StackLock lock;
+    auto & mgr = chip::Server::GetInstance().GetCommissioningWindowManager();
+    if (mgr.IsCommissioningWindowOpen())
+    {
+        mgr.CloseCommissioningWindow();
+        ChipLogProgress(Zcl, "Commissioning window closed");
+    }
+}
+
 JNI_METHOD(void, setDACProvider)(JNIEnv *, jobject, jobject provider)
 {
     if (!chip::Credentials::IsDeviceAttestationCredentialsProviderSet())
@@ -157,64 +195,6 @@ JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject mana
 JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value)
 {
     return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { OnOffManager::SetOnOff(endpoint, value); }) ==
-        CHIP_NO_ERROR;
-}
-
-/*
- * Color Control Manager
- */
-JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
-{
-    ColorControlManager::NewManager(endpoint, manager);
-}
-
-/*
- * Door Lock Manager
- */
-JNI_METHOD(void, setDoorLockManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
-{
-    DoorLockManager::NewManager(endpoint, manager);
-}
-
-JNI_METHOD(jboolean, setLockType)(JNIEnv *, jobject, jint endpoint, jint value)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { DoorLockManager::SetLockType(endpoint, value); }) ==
-        CHIP_NO_ERROR;
-}
-
-JNI_METHOD(jboolean, setLockState)(JNIEnv *, jobject, jint endpoint, jint value)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { DoorLockManager::SetLockState(endpoint, value); }) ==
-        CHIP_NO_ERROR;
-}
-
-JNI_METHOD(jboolean, setActuatorEnabled)(JNIEnv *, jobject, jint endpoint, jboolean value)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { DoorLockManager::SetActuatorEnabled(endpoint, value); }) ==
-        CHIP_NO_ERROR;
-}
-
-JNI_METHOD(jboolean, setAutoRelockTime)(JNIEnv *, jobject, jint endpoint, jint value)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { DoorLockManager::SetAutoRelockTime(endpoint, value); }) ==
-        CHIP_NO_ERROR;
-}
-
-JNI_METHOD(jboolean, setOperatingMode)(JNIEnv *, jobject, jint endpoint, jint value)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { DoorLockManager::SetOperatingMode(endpoint, value); }) ==
-        CHIP_NO_ERROR;
-}
-
-JNI_METHOD(jboolean, setSupportedOperatingModes)(JNIEnv *, jobject, jint endpoint, jint value)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda(
-               [endpoint, value] { DoorLockManager::SetSupportedOperatingModes(endpoint, value); }) == CHIP_NO_ERROR;
-}
-
-JNI_METHOD(jboolean, sendLockAlarmEvent)(JNIEnv *, jobject, jint endpoint)
-{
-    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint] { DoorLockManager::SendLockAlarmEvent(endpoint); }) ==
         CHIP_NO_ERROR;
 }
 

@@ -4268,18 +4268,18 @@
       "id": 2,
       "name": "MA-videoplayer",
       "deviceTypeRef": {
-        "code": 256,
+        "code": 266,
         "profileId": 259,
-        "label": "MA-onofflight",
-        "name": "MA-onofflight",
+        "label": "MA-onoffpluginunit",
+        "name": "MA-onoffpluginunit",
         "deviceTypeOrder": 0
       },
       "deviceTypes": [
         {
-          "code": 256,
+          "code": 266,
           "profileId": 259,
-          "label": "MA-onofflight",
-          "name": "MA-onofflight",
+          "label": "MA-onoffpluginunit",
+          "name": "MA-onoffpluginunit",
           "deviceTypeOrder": 0
         }
       ],
@@ -4287,10 +4287,10 @@
         4
       ],
       "deviceIdentifiers": [
-        256
+        266
       ],
-      "deviceTypeName": "MA-onofflight",
-      "deviceTypeCode": 256,
+      "deviceTypeName": "MA-onoffpluginunit",
+      "deviceTypeCode": 266,
       "deviceTypeProfileId": 259,
       "clusters": [
         {
@@ -5304,7 +5304,7 @@
           "mfgCode": null,
           "define": "DOOR_LOCK_CLUSTER",
           "side": "server",
-          "enabled": 1,
+          "enabled": 0,
           "commands": [
             {
               "name": "LockDoor",
@@ -5922,7 +5922,7 @@
           "mfgCode": null,
           "define": "WINDOW_COVERING_CLUSTER",
           "side": "server",
-          "enabled": 1,
+          "enabled": 0,
           "commands": [
             {
               "name": "UpOrOpen",
@@ -6422,7 +6422,7 @@
           "mfgCode": null,
           "define": "COLOR_CONTROL_CLUSTER",
           "side": "server",
-          "enabled": 1,
+          "enabled": 0,
           "commands": [
             {
               "name": "MoveToHue",
