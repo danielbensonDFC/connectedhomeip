@@ -90,7 +90,7 @@ fun base38Encode(inBuf: ByteArray, outBuf: CharArray): Unit {
     inBufLen -= bytesInChunk
     inIdx += bytesInChunk
 
-    val base38CharactersNeeded = kBase38CharactersNeededInNBytesChunk[bytesInChunk - 1].toByte()
+    val base38CharactersNeeded = kBase38CharactersNeededInNBytesChunk[bytesInChunk - 1]
 
     if ((outIdx + base38CharactersNeeded) > outBuf.size) {
       throw OnboardingPayloadException("Buffer is too small")

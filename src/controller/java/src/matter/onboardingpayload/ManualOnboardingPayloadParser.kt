@@ -190,7 +190,7 @@ class ManualOnboardingPayloadParser(decimalRepresentation: String) {
       }
 
       val decimalSubstring =
-        decimalString.substring(index.toInt(), (startIndex + numberOfCharsToRead).toInt())
+        decimalString.substring(index.toInt(), startIndex + numberOfCharsToRead)
       index.set(startIndex + numberOfCharsToRead)
       return toNumber(decimalSubstring)
     }
