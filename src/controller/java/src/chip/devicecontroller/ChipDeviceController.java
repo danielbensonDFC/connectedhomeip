@@ -1614,6 +1614,18 @@ public class ChipDeviceController {
   public native byte[] convertX509CertToMatterCert(byte[] x509Cert);
 
   /**
+   * Static variant of {@link #convertX509CertToMatterCert(byte[])}: converts an X.509v3 DER
+   * certificate into a Matter (CHIP TLV) certificate without a constructed controller. The
+   * conversion is stateless; a static entry point avoids the one-{@link ChipDeviceController}
+   * -per-process limit when preparing operational certificates (e.g. a fabric CA that mints X.509
+   * and must hand out Matter TLV). Requires the CHIP native library + platform to be initialized.
+   *
+   * @throws ChipDeviceControllerException if there was an issue during encoding (e.g. out of
+   *     memory, invalid certificate format)
+   */
+  public static native byte[] convertX509CertToMatterCertStatic(byte[] x509Cert);
+
+  /**
    * Extract skid from paa cert.
    *
    * <p>This method was deprecated. Please use {@link DeviceAttestation.extractSkidFromPaaCert}.
