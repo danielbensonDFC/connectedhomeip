@@ -20,6 +20,8 @@
 #include "AppImpl.h"
 #include "JNIDACProvider.h"
 
+#include "ColorControlManager.h"
+#include "LevelControlManager.h"
 #include "OnOffManager.h"
 #include "PowerSourceManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
@@ -195,6 +197,43 @@ JNI_METHOD(void, setOnOffManager)(JNIEnv *, jobject, jint endpoint, jobject mana
 JNI_METHOD(jboolean, setOnOff)(JNIEnv *, jobject, jint endpoint, jboolean value)
 {
     return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, value] { OnOffManager::SetOnOff(endpoint, value); }) ==
+        CHIP_NO_ERROR;
+}
+
+/*
+ * Level Control Manager
+ */
+JNI_METHOD(void, setLevelControlManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
+{
+    LevelControlManager::NewManager(endpoint, manager);
+}
+
+JNI_METHOD(jboolean, setCurrentLevel)(JNIEnv *, jobject, jint endpoint, jint value)
+{
+    return DeviceLayer::SystemLayer().ScheduleLambda(
+               [endpoint, value] { LevelControlManager::SetCurrentLevel(endpoint, static_cast<uint8_t>(value)); }) ==
+        CHIP_NO_ERROR;
+}
+
+/*
+ * Color Control Manager
+ */
+JNI_METHOD(void, setColorControlManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
+{
+    ColorControlManager::NewManager(endpoint, manager);
+}
+
+JNI_METHOD(jboolean, setCurrentHue)(JNIEnv *, jobject, jint endpoint, jint value)
+{
+    return DeviceLayer::SystemLayer().ScheduleLambda(
+               [endpoint, value] { ColorControlManager::SetCurrentHue(endpoint, static_cast<uint8_t>(value)); }) ==
+        CHIP_NO_ERROR;
+}
+
+JNI_METHOD(jboolean, setCurrentSaturation)(JNIEnv *, jobject, jint endpoint, jint value)
+{
+    return DeviceLayer::SystemLayer().ScheduleLambda(
+               [endpoint, value] { ColorControlManager::SetCurrentSaturation(endpoint, static_cast<uint8_t>(value)); }) ==
         CHIP_NO_ERROR;
 }
 

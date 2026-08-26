@@ -59,6 +59,16 @@ public class DeviceApp {
 
   public native boolean setOnOff(int endpoint, boolean value);
 
+  public native void setLevelControlManager(int endpoint, LevelControlManager manager);
+
+  public native boolean setCurrentLevel(int endpoint, int value);
+
+  public native void setColorControlManager(int endpoint, ColorControlManager manager);
+
+  public native boolean setCurrentHue(int endpoint, int value);
+
+  public native boolean setCurrentSaturation(int endpoint, int value);
+
   // (Re)opens the basic commissioning window for the given timeout (seconds),
   // so the device advertises as commissionable. Safe to call repeatedly — any
   // open window is closed first to reset the timeout.

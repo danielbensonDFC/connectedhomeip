@@ -16,6 +16,8 @@
  *    limitations under the License.
  */
 
+#include "ColorControlManager.h"
+#include "LevelControlManager.h"
 #include "OnOffManager.h"
 #include <app-common/zap-generated/attributes/Accessors.h>
 #include <app-common/zap-generated/ids/Attributes.h>
@@ -38,6 +40,42 @@ static void OnOffClusterAttributeChangeCallback(const app::ConcreteAttributePath
     }
 }
 
+static void LevelControlClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size,
+                                                       uint8_t * value)
+{
+    if (attributePath.mAttributeId == LevelControl::Attributes::CurrentLevel::Id)
+    {
+        uint8_t level = static_cast<uint8_t>(*value);
+
+        ChipLogProgress(Zcl, "Received level command endpoint %d value = %d", static_cast<int>(attributePath.mEndpointId), level);
+
+        LevelControlManager().PostLevelChanged(attributePath.mEndpointId, level);
+    }
+}
+
+static void ColorControlClusterAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint16_t size,
+                                                       uint8_t * value)
+{
+    if (attributePath.mAttributeId == ColorControl::Attributes::CurrentHue::Id)
+    {
+        uint8_t hue = static_cast<uint8_t>(*value);
+
+        ChipLogProgress(Zcl, "Received color hue command endpoint %d value = %d", static_cast<int>(attributePath.mEndpointId),
+                        hue);
+
+        ColorControlManager().PostHueChanged(attributePath.mEndpointId, hue);
+    }
+    else if (attributePath.mAttributeId == ColorControl::Attributes::CurrentSaturation::Id)
+    {
+        uint8_t saturation = static_cast<uint8_t>(*value);
+
+        ChipLogProgress(Zcl, "Received color saturation command endpoint %d value = %d",
+                        static_cast<int>(attributePath.mEndpointId), saturation);
+
+        ColorControlManager().PostSaturationChanged(attributePath.mEndpointId, saturation);
+    }
+}
+
 void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
                                        uint8_t * value)
 {
@@ -48,6 +86,14 @@ void MatterPostAttributeChangeCallback(const app::ConcreteAttributePath & attrib
     {
     case OnOff::Id:
         OnOffClusterAttributeChangeCallback(attributePath, size, value);
+        break;
+
+    case LevelControl::Id:
+        LevelControlClusterAttributeChangeCallback(attributePath, size, value);
+        break;
+
+    case ColorControl::Id:
+        ColorControlClusterAttributeChangeCallback(attributePath, size, value);
         break;
 
     default:
