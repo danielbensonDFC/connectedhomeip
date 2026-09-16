@@ -24,6 +24,7 @@
 #include "LevelControlManager.h"
 #include "OnOffManager.h"
 #include "PowerSourceManager.h"
+#include "ValveManager.h"
 #include "credentials/DeviceAttestationCredsProvider.h"
 #include <app/app-platform/ContentAppPlatform.h>
 #include <app/server/Dnssd.h>
@@ -234,6 +235,20 @@ JNI_METHOD(jboolean, setCurrentSaturation)(JNIEnv *, jobject, jint endpoint, jin
 {
     return DeviceLayer::SystemLayer().ScheduleLambda(
                [endpoint, value] { ColorControlManager::SetCurrentSaturation(endpoint, static_cast<uint8_t>(value)); }) ==
+        CHIP_NO_ERROR;
+}
+
+/*
+ * Valve Configuration and Control Manager (delegate-driven)
+ */
+JNI_METHOD(void, setValveManager)(JNIEnv *, jobject, jint endpoint, jobject manager)
+{
+    ValveManager::NewManager(endpoint, manager);
+}
+
+JNI_METHOD(jboolean, setValveState)(JNIEnv *, jobject, jint endpoint, jboolean open)
+{
+    return DeviceLayer::SystemLayer().ScheduleLambda([endpoint, open] { ValveManager::SetValveState(endpoint, open); }) ==
         CHIP_NO_ERROR;
 }
 

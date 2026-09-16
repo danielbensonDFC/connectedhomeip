@@ -38,6 +38,8 @@ shared_library("jni") {
     "java/OnOffManager.h",
     "java/PowerSourceManager.cpp",
     "java/PowerSourceManager.h",
+    "java/ValveManager.cpp",
+    "java/ValveManager.h",
   ]
 
   deps = [
@@ -80,6 +82,7 @@ android_library("java") {
     "java/src/com/matter/virtual/device/app/LevelControlManager.java",
     "java/src/com/matter/virtual/device/app/OnOffManager.java",
     "java/src/com/matter/virtual/device/app/PowerSourceManager.java",
+    "java/src/com/matter/virtual/device/app/ValveManager.java",
   ]
 
   javac_flags = [ "-Xlint:deprecation" ]

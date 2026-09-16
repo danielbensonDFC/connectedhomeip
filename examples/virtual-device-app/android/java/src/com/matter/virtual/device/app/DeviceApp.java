@@ -69,6 +69,13 @@ public class DeviceApp {
 
   public native boolean setCurrentSaturation(int endpoint, int value);
 
+  // Valve (ValveConfigurationAndControl) — delegate-driven: setValveManager registers the bridge whose
+  // handleValveOpen/handleValveClose fire on controller Open/Close; setValveState pushes CurrentState
+  // (Open/Closed) to the fabric for a locally-driven change (the reverse direction).
+  public native void setValveManager(int endpoint, ValveManager manager);
+
+  public native boolean setValveState(int endpoint, boolean open);
+
   // (Re)opens the basic commissioning window for the given timeout (seconds),
   // so the device advertises as commissionable. Safe to call repeatedly — any
   // open window is closed first to reset the timeout.
