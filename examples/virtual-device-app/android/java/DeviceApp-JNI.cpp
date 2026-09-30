@@ -139,6 +139,10 @@ JNI_METHOD(void, postServerInit)(JNIEnv *, jobject app, jint deviceTypeId)
 
     gDeviceTypeIds[0].deviceTypeId = static_cast<uint16_t>(deviceTypeId);
     (void) emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gDeviceTypeIds));
+
+    // Registers the NetworkCommissioning instance. Without it, reads of that cluster fail and
+    // third-party commissioners (Google/Apple Home) abort right after PASE — see AppImpl.cpp.
+    (void) PostServerInit();
 }
 
 // (Re)opens the basic commissioning window so the device advertises as

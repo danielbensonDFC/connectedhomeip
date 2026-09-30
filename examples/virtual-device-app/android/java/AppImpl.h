@@ -21,3 +21,10 @@
 #include <lib/support/JniReferences.h>
 
 CHIP_ERROR PreServerInit();
+
+/**
+ * App-level setup that must happen after Server::Init — currently registering the
+ * NetworkCommissioning cluster instance, whose attributes are otherwise unserved (see AppImpl.cpp).
+ * Called from the postServerInit JNI, which already holds the stack lock.
+ */
+CHIP_ERROR PostServerInit();

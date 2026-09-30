@@ -18,12 +18,14 @@
 #include "AppImpl.h"
 #include "DeviceApp-JNI.h"
 
+#include <app/clusters/network-commissioning/network-commissioning.h>
 #include <app/server/Server.h>
 #include <lib/core/CHIPCore.h>
 #include <lib/core/DataModelTypes.h>
 #include <lib/support/Span.h>
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/DeviceInfoProvider.h>
+#include <platform/NetworkCommissioning.h>
 
 using namespace chip;
 using namespace chip::DeviceLayer;
@@ -163,6 +165,68 @@ class FabricDelegate : public FabricTable::Delegate
 
 static FabricDelegate gFabricDelegate;
 
+// ---------------------------------------------------------------------------
+// NetworkCommissioning on the root endpoint.
+//
+// The ZAP enables this cluster, but all of its attributes are EXTERNAL_STORAGE:
+// they are only answered if a driver instance is registered. With no instance,
+// every read fails with an IM error — including FeatureMap (0xFFFC), which is
+// the FIRST thing a third-party commissioner reads after PASE. Google Home
+// read it, got a status error, and silently abandoned commissioning until the
+// fail-safe expired ("something went wrong"), which is how this was found.
+//
+// Normally this instance is created in examples/platform/linux/AppMain.cpp,
+// which the Android target never links — the same gap that left
+// DeviceInfoProvider unregistered above.
+//
+// EthernetDriver is the right flavour here even though the panel is on Wi-Fi:
+// it reports "already on an IP network, nothing to provision", which is true,
+// because the panel's Wi-Fi is owned by Android and never configured over
+// Matter. A WiFiDriver would advertise scan/connect capability we do not
+// implement; commissioners skip network provisioning for an already-networked
+// device anyway.
+// ---------------------------------------------------------------------------
+// EthernetDriver is abstract (GetMaxNetworks/GetNetworks), so provide the minimal concrete driver.
+// It reports exactly one, always-connected network: the interface the OS already brought up. There is
+// nothing to scan, add or remove — which is the whole point of using the ethernet flavour here.
+class SteamistEthernetDriver final : public NetworkCommissioning::EthernetDriver
+{
+public:
+    class NetworkIteratorImpl final : public NetworkCommissioning::NetworkIterator
+    {
+    public:
+        size_t Count() override { return 1; }
+
+        bool Next(NetworkCommissioning::Network & item) override
+        {
+            if (mExhausted)
+            {
+                return false;
+            }
+            mExhausted = true;
+
+            // A non-empty NetworkID is required; the interface name is what other platforms report.
+            static constexpr char kInterfaceName[] = "wlan0";
+            static_assert(sizeof(kInterfaceName) - 1 <= sizeof(item.networkID), "network id too long");
+            memcpy(item.networkID, kInterfaceName, sizeof(kInterfaceName) - 1);
+            item.networkIDLen = static_cast<uint8_t>(sizeof(kInterfaceName) - 1);
+            item.connected    = true;
+            return true;
+        }
+
+        void Release() override { delete this; }
+
+    private:
+        bool mExhausted = false;
+    };
+
+    uint8_t GetMaxNetworks() override { return 1; }
+    NetworkCommissioning::NetworkIterator * GetNetworks() override { return new NetworkIteratorImpl(); }
+};
+
+SteamistEthernetDriver gEthernetDriver;
+app::Clusters::NetworkCommissioning::Instance gEthernetNetworkCommissioningInstance(kRootEndpointId, &gEthernetDriver);
+
 CHIP_ERROR PreServerInit()
 {
     /**
@@ -180,5 +244,19 @@ CHIP_ERROR PreServerInit()
     (void) chip::DeviceLayer::PlatformMgr().AddEventHandler(DeviceEventCallback, reinterpret_cast<intptr_t>(nullptr));
     (void) Server::GetInstance().GetFabricTable().AddFabricDelegate(&gFabricDelegate);
 
+    return CHIP_NO_ERROR;
+}
+
+CHIP_ERROR PostServerInit()
+{
+    // Must run AFTER Server::Init: Init() registers the cluster's attribute/command handlers with
+    // the interaction model, which does not exist before the server is up.
+    CHIP_ERROR err = gEthernetNetworkCommissioningInstance.Init();
+    if (err != CHIP_NO_ERROR)
+    {
+        ChipLogError(DeviceLayer, "NetworkCommissioning init failed: %" CHIP_ERROR_FORMAT, err.Format());
+        return err;
+    }
+    ChipLogProgress(DeviceLayer, "NetworkCommissioning (ethernet) registered on the root endpoint");
     return CHIP_NO_ERROR;
 }
