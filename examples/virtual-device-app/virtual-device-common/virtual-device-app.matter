@@ -2457,6 +2457,24 @@ cluster GroupKeyManagement = 63 {
   fabric command access(invoke: administer) KeySetReadAllIndices(): KeySetReadAllIndicesResponse = 4;
 }
 
+/** The Fixed Label Cluster provides a feature for the device to tag an endpoint with zero or more read only
+labels. */
+cluster FixedLabel = 64 {
+  revision 1;
+
+  shared struct LabelStruct {
+    char_string<16> label = 0;
+    char_string<16> value = 1;
+  }
+
+  readonly attribute LabelStruct labelList[] = 0;
+  readonly attribute command_id generatedCommandList[] = 65528;
+  readonly attribute command_id acceptedCommandList[] = 65529;
+  readonly attribute attrib_id attributeList[] = 65531;
+  readonly attribute bitmap32 featureMap = 65532;
+  readonly attribute int16u clusterRevision = 65533;
+}
+
 /** The User Label Cluster provides a feature to tag an endpoint with zero or more labels. */
 cluster UserLabel = 65 {
   revision 1;
@@ -3504,6 +3522,60 @@ endpoint 2 {
     callback attribute serverList;
     callback attribute clientList;
     callback attribute partsList;
+    callback attribute featureMap;
+    callback attribute clusterRevision;
+  }
+
+  server cluster FixedLabel {
+    callback attribute labelList;
+    callback attribute featureMap;
+    callback attribute clusterRevision;
+  }
+
+  server cluster ValveConfigurationAndControl {
+    emits event ValveStateChanged;
+    emits event ValveFault;
+    callback attribute openDuration;
+    ram      attribute defaultOpenDuration;
+    callback attribute remainingDuration;
+    callback attribute currentState;
+    callback attribute targetState;
+    callback attribute valveFault;
+    callback attribute generatedCommandList;
+    callback attribute acceptedCommandList;
+    callback attribute attributeList;
+    ram      attribute featureMap default = 0x0000;
+    callback attribute clusterRevision;
+
+    handle command Open;
+    handle command Close;
+  }
+}
+endpoint 3 {
+  device type ma_water_valve = 66, version 1;
+
+
+  server cluster Identify {
+    callback attribute identifyTime;
+    callback attribute identifyType;
+    callback attribute featureMap;
+    callback attribute clusterRevision;
+
+    handle command Identify;
+    handle command TriggerEffect;
+  }
+
+  server cluster Descriptor {
+    callback attribute deviceTypeList;
+    callback attribute serverList;
+    callback attribute clientList;
+    callback attribute partsList;
+    callback attribute featureMap;
+    callback attribute clusterRevision;
+  }
+
+  server cluster FixedLabel {
+    callback attribute labelList;
     callback attribute featureMap;
     callback attribute clusterRevision;
   }

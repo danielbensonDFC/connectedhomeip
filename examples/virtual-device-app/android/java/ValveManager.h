@@ -23,12 +23,12 @@
 #include <lib/support/JniReferences.h>
 
 /**
- * @brief Bridges the ValveConfigurationAndControl cluster to Java for the Steamist SOM's shower-valve
- * endpoint. Unlike OnOff/LevelControl (which are attribute stores driven from ClusterChangeAttribute),
+ * @brief Bridges the ValveConfigurationAndControl cluster to Java for the Steamist SOM's valve
+ * endpoints (ep2 = steam, ep3 = shower; one manager per endpoint). Unlike OnOff/LevelControl (which are attribute stores driven from ClusterChangeAttribute),
  * the valve cluster is delegate-driven: the SDK server calls HandleOpenValve/HandleCloseValve when a
  * controller sends Open/Close. This manager IS that delegate; it forwards each to Java
- * (handleValveOpen/handleValveClose), where the SOM starts/stops a shower. It also exposes SetValveState
- * for the reverse direction (a shower started locally on the panel → push CurrentState to the fabric).
+ * (handleValveOpen/handleValveClose), where the SOM starts/stops steam or stops a shower. It also exposes SetValveState
+ * for the reverse direction (a session started locally on the panel → push CurrentState to the fabric).
  *
  * Installed explicitly from Java after server init (setValveManager), matching LevelControl/ColorControl.
  */

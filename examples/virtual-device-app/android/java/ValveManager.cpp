@@ -29,17 +29,28 @@ using namespace chip::app::Clusters;
 
 namespace {
 
-// One valve endpoint on this device (the panel's shower valve). Kept so a second install can't leak a
-// delegate and so SetValveState can be a no-op if the manager isn't up yet.
-ValveManager * gValveManager = nullptr;
+// One manager per valve endpoint (the panel has two: ep2 = steam, ep3 = shower). Indexed by slot, keyed
+// by endpoint, so a repeat install for the same endpoint can't leak a delegate.
+constexpr size_t kMaxValveEndpoints = 4;
+ValveManager * gValveManagers[kMaxValveEndpoints] = {};
+EndpointId gValveEndpoints[kMaxValveEndpoints]  = {};
 
 } // namespace
 
 void ValveManager::NewManager(jint endpoint, jobject manager)
 {
     ChipLogProgress(Zcl, "Device App: ValveManager::NewManager");
-    VerifyOrReturn(gValveManager == nullptr,
-                   ChipLogError(Zcl, "Device App::Valve::NewManager: a valve manager already exists"));
+    size_t slot = kMaxValveEndpoints;
+    for (size_t i = 0; i < kMaxValveEndpoints; i++)
+    {
+        VerifyOrReturn(gValveManagers[i] == nullptr || gValveEndpoints[i] != static_cast<EndpointId>(endpoint),
+                       ChipLogError(Zcl, "Device App::Valve::NewManager: endpoint %d already has a manager", endpoint));
+        if (gValveManagers[i] == nullptr && slot == kMaxValveEndpoints)
+        {
+            slot = i;
+        }
+    }
+    VerifyOrReturn(slot < kMaxValveEndpoints, ChipLogError(Zcl, "Device App::Valve::NewManager: no free valve slot"));
 
     ValveManager * mgr = new ValveManager();
     CHIP_ERROR err     = mgr->InitializeWithObjects(manager);
@@ -52,7 +63,8 @@ void ValveManager::NewManager(jint endpoint, jobject manager)
     mgr->mEndpoint = static_cast<EndpointId>(endpoint);
     // Register as the cluster's application delegate — this is how Open/Close reach us.
     ValveConfigurationAndControl::SetDefaultDelegate(static_cast<EndpointId>(endpoint), mgr);
-    gValveManager = mgr;
+    gValveManagers[slot]  = mgr;
+    gValveEndpoints[slot] = static_cast<EndpointId>(endpoint);
     ChipLogProgress(Zcl, "Device App: Valve delegate installed on endpoint %d", endpoint);
 }
 

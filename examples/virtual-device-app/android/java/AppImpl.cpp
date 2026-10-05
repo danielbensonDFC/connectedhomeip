@@ -84,10 +84,48 @@ public:
         void Release() override {}
     };
 
+    // -----------------------------------------------------------------------
+    // Fixed labels — name the two valve endpoints so a controller can tell them apart (both are the
+    // same Water Valve device type). Spec convention: label "name". Read by the Delta phone/SOM to show
+    // "Steam" / "Shower"; other ecosystems may ignore it. Heap-allocated per call because the Fixed
+    // Label server Release()s the iterator when it's done.
+    // -----------------------------------------------------------------------
+    class EndpointNameIterator : public Iterator<LabelEntry>
+    {
+    public:
+        explicit EndpointNameIterator(const char * name) : mName(name) {}
+        size_t Count() override { return mName == nullptr ? 0 : 1; }
+        bool Next(LabelEntry & item) override
+        {
+            if (mDone || mName == nullptr) return false;
+            mDone       = true;
+            item.label = CharSpan::fromCharString("name");
+            item.value = CharSpan::fromCharString(mName);
+            return true;
+        }
+        void Release() override { delete this; }
+    private:
+        const char * mName;
+        bool mDone = false;
+    };
+
+    static const char * EndpointName(EndpointId endpoint)
+    {
+        switch (endpoint)
+        {
+        case 2: return "Steam";  // keep in sync with MatterAccessoryService.STEAM_VALVE_ENDPOINT
+        case 3: return "Shower"; // keep in sync with MatterAccessoryService.SHOWER_VALVE_ENDPOINT
+        default: return nullptr;
+        }
+    }
+
     SupportedLocalesIterator *       IterateSupportedLocales() override       { return &mLocaleIterator; }
     SupportedCalendarTypesIterator * IterateSupportedCalendarTypes() override { return &mCalendarIterator; }
 
-    FixedLabelIterator * IterateFixedLabel(EndpointId) override { return &mLabelIterator; }
+    FixedLabelIterator * IterateFixedLabel(EndpointId endpoint) override
+    {
+        return new EndpointNameIterator(EndpointName(endpoint));
+    }
     UserLabelIterator *  IterateUserLabel(EndpointId) override  { return &mLabelIterator; }
 
     CHIP_ERROR SetUserLabelAt(EndpointId, size_t, const LabelEntry &) override { return CHIP_NO_ERROR; }
