@@ -18,6 +18,31 @@ this SDK. Read that first — this file only covers what's specific to working i
   and a second Generic Switch endpoint. Mirrors the SOM repo's branch of the same name.
   Push target for this is also `fork`, same caveats as the SOM-side doc: this hasn't been
   walked through end-to-end with a real ecosystem commissioner yet.
+- `delta-poc/phase0-controller-bindings` (off `steamistMods`) — builds the Android **controller**
+  bindings (`android-arm64-chip-tool`) that the separate **delta-matter** repo vendors and consumes.
+  This is the branch to use for the delta-matter POC. **Currently `origin` is
+  `git@github.com:danielbensonDFC/connectedhomeip.git` over SSH** (HTTPS push fails — GitHub dropped
+  password auth; the `fork`/`origin`=upstream split described elsewhere in this doc is not how the
+  checkout is actually configured now).
+
+## Controller bindings (for the delta-matter POC) — separate from the device work above
+
+Everything above is the **device/switch** role (virtual-device-app). The **controller** bindings
+are a different build, on `delta-poc/phase0-controller-bindings`, with two committed changes on top
+of `steamistMods`:
+1. **kotlinc-2.4 `-Werror` fix** for the `onboarding_payload` target.
+2. **static `convertX509CertToMatterCertStatic`** — `src/controller/java/.../ChipDeviceController.java`
+   + `src/controller/java/CHIPDeviceController-JNI.cpp`. A stateless X.509→Matter-TLV conversion that
+   needs no controller instance (the delta-matter CA uses it; the instance method would hit the
+   one-`ChipDeviceController`-per-process limit). *(As it turned out it's currently unused by
+   delta-matter — the real cert bug was a public-key encoding issue on the app side — but it's a valid,
+   harmless addition kept in case a future path needs Java-side X.509→TLV.)*
+
+Build target: `android-arm64-chip-tool`, and we rebuild with **`chip_mdns="minimal"`** (Android's
+NsdManager can't *resolve* Matter services — found→lost→timeout — nor publish comma-subtypes). Full
+rebuild + re-vendor commands, plus the **Netskope corp-CA env** required for the pigweed bootstrap
+(`SSL_CERT_FILE=~/.corp-ca.pem` etc.) and the NDK/kotlinc/JDK-17 prerequisites, are documented in
+**delta-matter/CLAUDE.md → "Regenerating the bindings"** (single source of truth — don't duplicate).
 
 ## What's modified from upstream, and why
 
@@ -73,6 +98,37 @@ library + jar, rather than using any prebuilt AAR (none exists for the Android d
    over raw multicast sockets, bypassing `NsdManager` entirely. **If you ever do a truly
    fresh `gn gen` for this out-directory, you must re-add this line** — it's easy to lose
    since it lives outside version control.
+
+5. **Water Valve endpoint 2 → shower (scaffolded 2026-08-29; native rebuild pending).** Added a
+   **second application endpoint** (endpoint 2 = device type `MA-water-valve` 0x0042 +
+   `ValveConfigurationAndControl` 0x0081, base feature) to `virtual-device-app.zap` so the SOM panel
+   presents a valve alongside the ep1 Chroma light; a controller Open/Close maps to a shower start/stop
+   in the Steamist app. Unlike OnOff/Level/Color (attribute stores via `ClusterChangeAttribute`), the
+   valve cluster is **code-driven with a `Delegate`** — new native **`ValveManager.{h,cpp}`** implements
+   `ValveConfigurationAndControl::Delegate` (registered with `SetDefaultDelegate`; `HandleOpenValve`/
+   `HandleCloseValve` bridge to Java and drive `UpdateCurrentState`), plus `setValveManager`/`setValveState`
+   JNI + `ValveManager.java` + `android/BUILD.gn` source-list entries. **ZAP validated** (`generate.py`
+   regenerated `virtual-device-app.matter` with endpoint 2, exit 0), but **`libDeviceApp.so`/`DeviceApp.jar`
+   are NOT yet rebuilt** (needs the activated pigweed env — `gn gen` fails without it). Full remaining
+   steps + the SOM-app bridge are in **delta-matter/BRIZO_INTEGRATION_DESIGN.md → "Phase C increment 3"**.
+
+6. **Two valves: ep2 = Steam, ep3 = Shower (2026-10-01; built, `.so` copied into the SOM repo; needs
+   on-device verify).** Item 5's valve turned out to drive **steam** in the Steamist app. Endpoint 3 is a
+   second `MA-water-valve` (a copy of ep2's endpoint type) for **shower**. In the Steamist app both valves
+   start (Open) and end (Close) a real panel session of their type, and report panel-started sessions. Both valve
+   endpoints gained the **Fixed Label** cluster (0x0040); `SteamistDeviceInfoProvider::IterateFixedLabel`
+   returns `name` = "Steam" / "Shower" so controllers can tell them apart — the Delta phone reads it.
+   `ValveManager` now keeps one delegate per endpoint (was a single global that refused a second install).
+   Endpoint numbers are mirrored in `MatterAccessoryService` (`VALVE_ENDPOINT`, `SHOWER_VALVE_ENDPOINT`).
+   Existing pairings cache the old endpoint list — Google Home may need re-pairing to see ep3.
+
+7. **ACL limits raised for Delta sibling mode (2026-10-21; built + harvested, uncommitted).**
+   `virtual-device-common/include/CHIPProjectAppConfig.h`: `CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_
+   ENTRIES_PER_FABRIC 8`, `…_SUBJECTS_PER_ENTRY 16`, `…_TARGETS_PER_ENTRY 4` (SDK example defaults 4/4/3).
+   The Brizo hub rewrites this device's ACL at runtime (delta-matter/SIBLING_MODE_DESIGN.md §4). Check a
+   build with `llvm-objdump` on `AccessControlDelegate::GetMaxEntriesPerFabric` etc. (`mov x8, #8/#16/#4`).
+   This branch's `out/android-arm64-virtual-device-app` had lost its `.ninja_log`, so the rebuild was a
+   full one (~5 min); later ones are incremental again.
 
 ## Rebuild instructions
 

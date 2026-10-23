@@ -51,5 +51,15 @@
 
 #define CHIP_CONFIG_ENABLE_ACL_EXTENSIONS 1
 
+// Delta sibling mode (delta-matter/SIBLING_MODE_DESIGN.md §4/§7.1): the hub rewrites this
+// device's ACL at runtime. Sibling-mode layout on the Delta fabric = commissioning phone admin,
+// hub CAT admin, phone CAT Operate, panel CAT View, panel CAT Operate (non-session endpoints),
+// plus exempt-panel entries (node ids, Operate on the session endpoints). The panels share one
+// CAT, so the number of panels is unbounded; only the panels exempt at the same time are bounded,
+// by (entries - 5) * subjects = 3 * 16 = 48. Storage is static per fabric (16 fabrics), ~45 KB.
+#define CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_ENTRIES_PER_FABRIC 8
+#define CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_SUBJECTS_PER_ENTRY 16
+#define CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_TARGETS_PER_ENTRY 4
+
 // include the CHIPProjectConfig from config/standalone
 #include <CHIPProjectConfig.h>
